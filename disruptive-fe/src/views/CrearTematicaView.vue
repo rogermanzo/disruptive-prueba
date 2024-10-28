@@ -35,6 +35,7 @@
 
 <script>
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 
 export default {
   data() {
@@ -42,34 +43,69 @@ export default {
       nombreTematica: '',
       permisos: [],
       tematicas: [],
-      permisosOptions: ['Leer', 'Escribir', 'Eliminar'],
+      permisosOptions: [],
     };
   },
   setup() {
     const router = useRouter();
-    
     const goBack = () => {
-      router.push('/subir'); // Cambia esto a la ruta de tu lista de contenidos
+      router.push('/subir'); 
     };
 
     return { goBack };
   },
   methods: {
-    agregarTematica() {
-      if (this.nombreTematica && this.permisos.length) {
-        this.tematicas.push({
-          id: Date.now(),
-          nombre: this.nombreTematica,
-          permisos: this.permisos,
+    async obtenerPermisos() { 
+      this.permisosOptions = ["videos", "imagenes", "documentos"];
+/*
+      const token = localStorage.getItem('x-access-token'); // Obtener el token del localStorage
+      try {
+        const response = await axios.get('http://localhost:5000/categories', {
+          headers: {
+            'x-access-token': token, // Añadir el token en las cabeceras
+          },
         });
-        this.nombreTematica = '';
-        this.permisos = [];
+        // Extraer tipos de permisos
+        this.permisosOptions = response.data.map(category => category.type); // [" .txt", ".mp4", ".png"]
+      } catch (error) {
+        console.error('Error obteniendo los permisos:', error);
+      }*/
+    },
+    async agregarTematica() {
+      if (this.nombreTematica && this.permisos.length) {
+        try {
+          const token = localStorage.getItem('x-access-token'); // Obtener el token del localStorage
+          const response = await axios.post('http://localhost:5000/thematic', {
+            name: this.nombreTematica,
+            permission: this.permisos, 
+          }, {
+            headers: {
+              'x-access-token': token, 
+            },
+          });
+
+          console.log(response.data.message); 
+          this.$emit('tematica-agregada'); 
+          this.$emit('cerrarDialogoTematica'); 
+          this.tematicas.push({
+            id: Date.now(),
+            nombre: this.nombreTematica,
+            permisos: this.permisos,
+          });
+          this.nombreTematica = '';
+          this.permisos = [];
+        } catch (error) {
+          console.error('Error al crear la temática:', error);
+        }
       }
     },
+  },
+  mounted() {
+    this.obtenerPermisos(); 
   },
 };
 </script>
 
+
 <style scoped>
-/* Estilos personalizados aquí */
 </style>

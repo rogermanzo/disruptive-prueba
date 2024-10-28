@@ -1,56 +1,130 @@
 <template>
-  <v-app>
-    <v-container fluid>
-      <v-card class="mt-5">
-        <v-card-title class="text-h5"><!--{{ content.name }}--></v-card-title>
-        <v-card-subtitle class="text-subtitle-1">Autor: <!--{{ content.author }}--></v-card-subtitle>
-        <v-divider></v-divider>
-        <v-card-text>
-          <v-row>
-            <v-col>
-              <p><strong>Categoría:</strong> <!--{{ content.category }}--></p>
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col>
-              <p><strong>Archivo:</strong> <!--{{ content.temathic }}--></p>
-            </v-col>
-          </v-row>
-        </v-card-text>
-        <v-row justify="center" class="mt-4">
-          <v-col cols="auto">
-            <v-btn color="primary">Abrir el archivo</v-btn>
+  <v-container v-if="!isLoading">
+    <v-card>
+      <v-card-title>
+        <h2>Detalles del Contenido</h2>
+      </v-card-title>
+      <v-card-text>
+        <v-row>
+          <v-col>
+            <strong>ID:</strong> {{ content._id || 'No disponible' }}
           </v-col>
-          <v-col cols="auto">
-            <v-btn color="secondary" @click="goBack">Regresar</v-btn>
+          <v-col>
+            <strong>Autor:</strong> {{ content.author || 'No disponible' }}
+          </v-col>
+          <v-col>
+            <strong>Categoría:</strong> {{ content.category || 'No disponible' }}
+          </v-col>
+          <v-col>
+            <strong>Temática:</strong> {{ content.thematic || 'No disponible' }}
           </v-col>
         </v-row>
-        <br>
-      </v-card>
-    </v-container>
-  </v-app>
+        <v-divider></v-divider>
+        <v-row>
+          <v-col>
+            <strong>Archivos:</strong>
+            <ul>
+              <li v-for="file in content.files" :key="file._id">
+                {{ file.filename }}
+                <v-btn @click="downloadFile(file.path)">Descargar</v-btn>
+              </li>
+            </ul>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+  </v-container>
+  <v-container v-else>
+    <v-progress-circular indeterminate color="primary"></v-progress-circular>
+  </v-container>
 </template>
 
+
+
+
 <script>
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import axios from 'axios';
 
 export default {
-  props: {
-    content: {
-      type: Object,
-      required: true,
-    },
-  },
   setup() {
-    const router = useRouter();
+    const route = useRoute();
+    const content = ref({});
+    const isLoading = ref(true);
+    const categories = ref([]); 
+    const thematics = ref([]); 
 
-    const goBack = () => {
-      router.push('/listar');
+    const getContentById = async () => {
+      const contentId = route.params.contentId; 
+      try {
+        const token = localStorage.getItem('x-access-token'); 
+        const response = await axios.get(`http://localhost:5000/content/${contentId}`, {
+          headers: {
+            'x-access-token': token,
+          },
+        });
+        content.value = response.data; 
+
+        await fetchCategoriesAndThematics();
+      } catch (error) {
+        console.error('Error al obtener el contenido:', error.response?.data?.message || error.message);
+      } finally {
+        isLoading.value = false; 
+      }
     };
 
-    return { goBack };
+    const fetchCategoriesAndThematics = async () => {
+      const token = localStorage.getItem('x-access-token');
+      try {
+        const [categoriesResponse, thematicsResponse] = await Promise.all([
+          axios.get('http://localhost:5000/categories', {
+            headers: {
+              'x-access-token': token,
+            },
+          }),
+          axios.get('http://localhost:5000/thematics', {
+            headers: {
+              'x-access-token': token,
+            },
+          }),
+        ]);
+
+        categories.value = categoriesResponse.data;
+        thematics.value = thematicsResponse.data;
+      } catch (error) {
+        console.error('Error al obtener categorías y temáticas:', error.message);
+      }
+    };
+
+    const getCategoryName = (id) => {
+      const category = categories.value.find(cat => cat._id === id);
+      return category ? category.name : 'Desconocido';
+    };
+
+    const getThematicName = (id) => {
+      const thematic = thematics.value.find(thm => thm._id === id);
+      return thematic ? thematic.name : 'Desconocido';
+    };
+
+    onMounted(() => {
+      getContentById(); 
+    });
+
+    const downloadFile = (path) => {
+      window.open(path, '_blank');
+    };
+
+    return { content, isLoading, downloadFile, getCategoryName, getThematicName };
   },
 };
 </script>
 
-<style scoped></style>
+
+
+
+<style scoped>
+.v-img {
+  border-radius: 8px;
+}
+</style>
