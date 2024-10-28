@@ -1,0 +1,18 @@
+version: '3'
+
+services: 
+    webnode:
+      container_name: disruptive-back
+      restart: always
+      build: .
+      ports: 
+        - "5000:3000"
+      links: 
+        - mongo
+      volumes:
+        - .:/usr/src/app
+    mongo: 
+        container_name: mongodb
+        image: mongo
+        ports: 
+          - "27020:27017"
