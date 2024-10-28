@@ -6,7 +6,7 @@ const fs = require('fs');
 const contentSchema = new mongoose.Schema({
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     thematic: { type: mongoose.Schema.Types.ObjectId, ref: 'Thematic' },
-    author: { type: String, required: true },
+    author: { type: String, required: false },
     files: [{ type: {filename: String, path: String} }],
     name: {type: String, required: false}
 });
